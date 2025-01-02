@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { auth } from 'hono/utils/basic-auth';
 import { verify } from 'hono/jwt';
+import { createBlogInput,updateBlogInput } from 'validator-common';
 
 
 export const blogRouter = new Hono<{
@@ -21,17 +22,27 @@ blogRouter.use ("/*",async(c, next) => {
     //pass it down to the route handler
 
     const authHeader = c.req.header('authorization')|| "";  // added || "" empty string to prevent type error 
-    const user = await verify(authHeader, c.env.JWT_SECRET);
+    
+    try {
+        const user = await verify(authHeader, c.env.JWT_SECRET);
 
-    if(user){
-        //set the user id in the context
-        c.set("userId", user.id as string);
-        await next();
-    }else{
+        if(user){
+            //set the user id in the context
+            c.set("userId", user.id as string);
+            await next();
+        }else{
+            c.status(403);  //forbidden
+            return c.json({
+                message: "You are not logged in or your token is invalid"
+            })  
+        }
+         
+    }
+    catch(e){
         c.status(403);  //forbidden
         return c.json({
             message: "You are not logged in or your token is invalid"
-        })  
+        })
     }
 
     
@@ -40,6 +51,14 @@ blogRouter.use ("/*",async(c, next) => {
 
 blogRouter.post('/', async (c) => {
     const body = await c.req.json();
+    const {success } = createBlogInput.safeParse(body);
+    if (!success) {
+        c.status(411);
+        return c.json({
+            message: "Inputs not correct"
+        })
+    }
+
     const authorId = c.get("userId");
 
     const prisma = new PrismaClient({
@@ -70,6 +89,13 @@ blogRouter.put('/', async (c) => {
       }).$extends(withAccelerate())
   
     const body = await c.req.json();
+    const {success } = updateBlogInput.safeParse(body);
+    if (!success) {
+        c.status(411);
+        return c.json({
+            message: "Inputs not correct"
+        })
+    }
 
     const blog = await prisma.post.update({
         where: {

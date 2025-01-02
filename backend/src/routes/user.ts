@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { sign,verify } from "hono/jwt";
-
+import { signupInput,signinInput } from "validator-common";
 
 export const userRouter = new Hono<{
 	Bindings: {
@@ -14,11 +14,25 @@ export const userRouter = new Hono<{
 userRouter.post('/signup', async (c) => {
   
     // we have to initialized the prisma client in every route - drawback of cloudflare serverless/edge workers
+    
+    const body = await c.req.json();
+    const {success} =  signupInput.safeParse(body); // added zod validation
+    if (!success){
+      c.status(411);
+      return c.json({error : "Input are incorrect"});
+    }
+
     const prisma = new PrismaClient({
       datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate())
 
-    const body = await c.req.json();
+    
+    // This is where we sanitize the input ie to add zod validation
+    // format 
+    // {
+    //      email: string, 
+    //      password: string
+    // }
 
     try{
     const user  = await prisma.user.create({
@@ -43,11 +57,18 @@ userRouter.post('/signup', async (c) => {
 
 userRouter.post('/signin', async (c) => {
 
+  const body = await c.req.json();
+  const {success} =  signinInput.safeParse(body); // added zod validation
+    if (!success){
+      c.status(411);
+      return c.json({error : "Input are incorrect"});
+    }
+
   const prisma = new PrismaClient({
       datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate())
 
-    const body = await c.req.json();
+    
 
     try{
     const user = await prisma.user.findUnique({
