@@ -16,7 +16,9 @@ userRouter.post('/signup', async (c) => {
     // we have to initialized the prisma client in every route - drawback of cloudflare serverless/edge workers
     
     const body = await c.req.json();
+    console.log(body)
     const {success} =  signupInput.safeParse(body); // added zod validation
+    console.log(success)
     if (!success){
       c.status(411);
       return c.json({error : "Input are incorrect"});
@@ -37,10 +39,11 @@ userRouter.post('/signup', async (c) => {
     try{
     const user  = await prisma.user.create({
       data: {
-        email: body.email,
+        email: body.username,
         password: body.password,
       }
     });
+
     //@ts-ignore
     const token  = await sign({id: user.id}, c.env.JWT_SECRET)
 
@@ -73,7 +76,7 @@ userRouter.post('/signin', async (c) => {
     try{
     const user = await prisma.user.findUnique({
       where: {
-        email: body.email,
+        email: body.username,
         password: body.password
       }
     });
@@ -86,6 +89,7 @@ userRouter.post('/signin', async (c) => {
     //@ts-ignore 
     const token  = await sign({id: user.id}, c.env.JWT_SECRET)
 
+    console.log(token);
     return c.json({
       jwt : token
     })}

@@ -1,13 +1,17 @@
 import { Hono } from 'hono'
 import { userRouter } from './routes/user';
 import {blogRouter} from './routes/blog';
+import {cors} from 'hono/cors'
+
+
 // remember use this code below whenever you have a envrionment variable in Hono (as TS throws type error for env strings)
 const app = new Hono<{
 	Bindings: {
 		DATABASE_URL: string
-    JWT_SECRET: string
+    	JWT_SECRET: string
 	}
 }>();
+app.use('/*',cors());
 
 //middleware
 // app.use('/api/v1/blog/*', async (c, next) => {
